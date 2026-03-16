@@ -1,0 +1,19 @@
+{
+  "name": "@brainflow/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "express-rate-limit": "^7.0.0",
+    "pg": "^8.13.0",
+    "pino": "^9.0.0",
+    "pino-http": "^9.0.0",
+    "zod": "^3.0.0"
+  }
+}

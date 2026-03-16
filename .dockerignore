@@ -1,0 +1,11 @@
+node_modules
+.git
+*.md
+.env
+.env.*
+!.env.example
+packages/cli/src
+packages/cli/test
+packages/web/node_modules
+packages/server/node_modules
+packages/server/test

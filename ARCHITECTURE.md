@@ -1,10 +1,10 @@
-# draw.bots.town — Architecture Specification v2
+# your-domain.com — Architecture Specification v2
 
 ## Overview
 
 A self-hosted diagram viewer and manager. Users create and browse architecture diagrams via a web UI. Agents and scripts create/update diagrams via REST API or CLI. Diagrams use Mermaid syntax with C4 architecture conventions.
 
-This application replaces Excalidraw at `draw.bots.town`.
+This application replaces  at `your-domain.com`.
 
 **This document is the single source of truth for implementation.** Every detail is specified. Follow it exactly.
 
@@ -264,12 +264,12 @@ Sort always includes tie-breaker: `ORDER BY <sort> <order>, id DESC`.
 **POST /api/v1/diagrams** (create):
 ```json
 {
-    "title": "swap.win System Overview",
-    "slug": "swap-win-overview",
+    "title": "Example System Overview",
+    "slug": "example-overview",
     "description": "High-level C4 context diagram",
-    "content": "C4Context\n  title swap.win...",
+    "content": "C4Context\n  title example-app...",
     "diagram_type": "mermaid",
-    "tags": ["swap.win", "architecture"]
+    "tags": ["example-app", "architecture"]
 }
 ```
 - `slug` is optional. If omitted, auto-generated from title: lowercase, replace non-alphanumeric with hyphens, collapse consecutive hyphens, trim hyphens from edges, truncate to 255 chars.
@@ -305,12 +305,12 @@ Sort always includes tie-breaker: `ORDER BY <sort> <order>, id DESC`.
     "ok": true,
     "data": {
         "id": "550e8400-e29b-41d4-a716-446655440000",
-        "slug": "swap-win-overview",
-        "title": "swap.win System Overview",
+        "slug": "example-overview",
+        "title": "Example System Overview",
         "description": "High-level C4 context diagram",
         "content": "C4Context\n  ...",
         "diagram_type": "mermaid",
-        "tags": ["architecture", "swap.win"],
+        "tags": ["architecture", "example-app"],
         "version": 1,
         "created_at": "2026-03-15T21:00:00.000Z",
         "updated_at": "2026-03-15T21:00:00.000Z"
@@ -338,7 +338,7 @@ List responses include all fields EXCEPT `content` (metadata only). Client fetch
     "ok": false,
     "error": {
         "code": "SLUG_CONFLICT",
-        "message": "A diagram with slug 'swap-win-overview' already exists",
+        "message": "A diagram with slug 'example-overview' already exists",
         "status": 409,
         "requestId": "req_abc123"
     }
@@ -557,6 +557,23 @@ mermaid.initialize({
 
 **`securityLevel: 'strict'`** is mandatory. This prevents HTML injection via Mermaid's HTML label feature. Never change this to `'loose'`.
 
+For complex diagrams, prefer Mermaid's ELK layout where supported (for example, large flowcharts with heavy edge crossing), because it generally produces clearer node spacing and fewer overlaps than default layout engines.
+
+### Click-to-Navigate
+
+The frontend supports Mermaid `click` directives without relaxing Mermaid security.
+
+1. Parse `click <nodeId> "<url>" "<tooltip>"` directives from the raw diagram source.
+2. Strip those directives before calling `mermaid.render(...)` to avoid strict-mode rendering issues.
+3. After SVG render, locate target nodes using:
+   - Mermaid-generated SVG IDs (contains/exact match)
+   - `data-id` attributes
+   - Exact label text match
+4. Decorate matching nodes (cursor + visual indicator) and attach navigation handlers.
+5. Distinguish click vs drag by comparing `mousedown` and `mouseup` pointer movement so pan/zoom drags do not trigger navigation.
+
+This approach keeps `securityLevel: 'strict'` while still enabling drill-down navigation between diagrams.
+
 ### Component Specifications
 
 **Sidebar.jsx**
@@ -657,9 +674,9 @@ export default defineConfig({
     },
     server: {
         proxy: {
-            '/api': 'http://localhost:3900',
-            '/healthz': 'http://localhost:3900',
-            '/readyz': 'http://localhost:3900',
+            '/api': 'http://localhost:3030',
+            '/healthz': 'http://localhost:3030',
+            '/readyz': 'http://localhost:3030',
         },
     },
 });
@@ -715,7 +732,7 @@ draw open <slug>                             Open diagram in default browser
 
 | Env var        | Default                  | Description           |
 |----------------|--------------------------|-----------------------|
-| DRAW_API_URL   | http://localhost:3900    | API base URL          |
+| DRAW_API_URL   | http://localhost:3030    | API base URL          |
 | DRAW_TOKEN     | —                        | Auth token (future)   |
 
 ### Exit Codes
@@ -734,10 +751,10 @@ draw open <slug>                             Open diagram in default browser
 ```bash
 # Create from stdin
 echo "graph TD; A-->B" | draw create "Quick sketch" --stdin
-# → Created "Quick sketch" → https://draw.bots.town/d/quick-sketch
+# → Created "Quick sketch" → https://your-domain.com/d/quick-sketch
 
 # Get content and pipe to file
-draw get swap-win-overview > backup.mmd
+draw get example-overview > backup.mmd
 
 # Agent workflow: generate + create in one shot
 echo "C4Context..." | draw create "My Architecture" --stdin --tag project --json
@@ -747,14 +764,14 @@ echo "C4Context..." | draw create "My Architecture" --stdin --tag project --json
 
 **Human-readable (default):**
 ```
-  swap-win-overview    swap.win System Overview    [architecture, swap.win]    2h ago
+  example-overview    Example System Overview    [architecture, example-app]    2h ago
   liquidation-flow     Liquidation Bot Flow        [trading]                  1d ago
 ```
 
 **JSON (--json):**
 ```json
 [
-  {"slug":"swap-win-overview","title":"swap.win System Overview","tags":["architecture","swap.win"],"updated_at":"2026-03-15T21:00:00Z"},
+  {"slug":"example-overview","title":"Example System Overview","tags":["architecture","example-app"],"updated_at":"2026-03-15T21:00:00Z"},
   {"slug":"liquidation-flow","title":"Liquidation Bot Flow","tags":["trading"],"updated_at":"2026-03-14T10:00:00Z"}
 ]
 ```
@@ -786,7 +803,7 @@ RUN npm ci --workspace=packages/server --omit=dev && chown -R draw:draw /app
 COPY --chown=draw:draw packages/server/ packages/server/
 COPY --chown=draw:draw --from=web-build /app/packages/web/dist packages/server/public
 USER draw
-EXPOSE 3900
+EXPOSE 3030
 CMD ["node", "packages/server/src/index.js"]
 ```
 
@@ -830,11 +847,11 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "${DRAW_PORT:-3900}:3900"
+      - "${DRAW_PORT:-3030}:3030"
     environment:
       DATABASE_URL: postgres://draw:${DRAW_DB_PASSWORD}@postgres:5432/draw
-      PORT: 3900
-      CORS_ORIGIN: ${CORS_ORIGIN:-https://draw.bots.town}
+      PORT: 3030
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
       NODE_ENV: production
       DB_QUERY_TIMEOUT: 10000
     depends_on:
@@ -845,6 +862,29 @@ volumes:
   draw-pgdata:
 ```
 
+### docker-compose.dev.yml
+
+```yaml
+services:
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5433:5432"
+    volumes:
+      - draw-dev-pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: draw
+      POSTGRES_USER: draw
+      POSTGRES_PASSWORD: draw
+    healthcheck:
+      test: pg_isready -U draw -d draw
+      interval: 5s
+      retries: 5
+
+volumes:
+  draw-dev-pgdata:
+```
+
 ### .env.example
 
 ```bash
@@ -852,8 +892,8 @@ volumes:
 DRAW_DB_PASSWORD=change-me-in-production
 
 # Optional
-DRAW_PORT=3900
-CORS_ORIGIN=https://draw.bots.town
+DRAW_PORT=3030
+CORS_ORIGIN=https://your-domain.com
 ```
 
 **Note:** `DRAW_DB_PASSWORD` uses `?` syntax in compose — Docker will refuse to start if this env var is not set. No more accidental `draw` passwords in production.
@@ -889,7 +929,7 @@ Exact order of operations on `node packages/server/src/index.js`:
 8. Log "Server ready on port {PORT}"
 ```
 
-The SPA fallback (step 5i) is important: any request that doesn't match `/api/*`, `/healthz`, `/readyz`, or a static file should serve `index.html` so that client-side routing works (e.g., direct link to `/d/swap-win-overview`).
+The SPA fallback (step 5i) is important: any request that doesn't match `/api/*`, `/healthz`, `/readyz`, or a static file should serve `index.html` so that client-side routing works (e.g., direct link to `/d/example-overview`).
 
 ---
 
@@ -953,36 +993,34 @@ migrations.test.js:
 
 ---
 
-## Deployment Steps (claudesworth)
 
 ```bash
-# 1. Project already at /home/clawd/clawd/projects/draw/
 
 # 2. Create .env file
 cp .env.example .env
 # Edit .env: set DRAW_DB_PASSWORD to something secure
 
-# 3. Build and start
+# 3. (Optional local development) start dev Postgres only
+docker compose -f docker-compose.dev.yml up -d
+
+# 4. Build and start production stack
 docker compose up -d --build
 
-# 4. Verify
-curl http://localhost:3900/healthz   # → { "ok": true }
-curl http://localhost:3900/readyz    # → { "ok": true, "db": "connected", "migrations": "current" }
-curl http://localhost:3900/api/v1/diagrams  # → { "ok": true, "data": [], "meta": {...} }
+# 5. Verify
+curl http://localhost:3030/healthz   # → { "ok": true }
+curl http://localhost:3030/readyz    # → { "ok": true, "db": "connected", "migrations": "current" }
+curl http://localhost:3030/api/v1/diagrams  # → { "ok": true, "data": [], "meta": {...} }
 
-# 5. Update Cloudflare tunnel
-# In Cloudflare Zero Trust dashboard:
-# Change draw.bots.town service from localhost:3030 → localhost:3900
+# 6. Update Cloudflare tunnel
+# In :
+# Ensure your-domain.com service points to localhost:3030
 
-# 6. Verify public access
-curl https://draw.bots.town/healthz
+# 7. Verify public access
+curl https://your-domain.com/healthz
 
-# 7. Tear down old Excalidraw
-docker stop excalidraw excalidraw-collab
-docker rm excalidraw excalidraw-collab
 
-# 8. Create test diagram
-curl -X POST https://draw.bots.town/api/v1/diagrams \
+# 9. Create test diagram
+curl -X POST https://your-domain.com/api/v1/diagrams \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Test Diagram",
@@ -1019,7 +1057,6 @@ cat backups/draw_YYYYMMDD_HHMMSS.sql | docker compose exec -T postgres psql -U d
 ### Schedule (cron)
 
 ```
-0 3 * * * cd /home/clawd/clawd/projects/draw && ./scripts/backup.sh
 ```
 
 ---

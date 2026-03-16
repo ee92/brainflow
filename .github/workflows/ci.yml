@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: draw
+          POSTGRES_USER: draw
+          POSTGRES_PASSWORD: draw
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U draw -d draw"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Server tests
+        run: node --test packages/server/test/*.test.js
+        env:
+          DATABASE_URL: postgres://draw:draw@localhost:5432/draw
+
+      - name: CLI tests
+        run: node --test packages/cli/test/*.test.js
+
+      - name: Build frontend
+        run: npm run build --workspace=packages/web
+
+      - name: Syntax check
+        run: |
+          node --check packages/server/src/index.js
+          node --check packages/cli/src/index.js
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t draw-test .

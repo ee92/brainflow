@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5433:5432"
+    volumes:
+      - draw-dev-pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: draw
+      POSTGRES_USER: draw
+      POSTGRES_PASSWORD: draw
+    healthcheck:
+      test: pg_isready -U draw -d draw
+      interval: 5s
+      retries: 5
+
+volumes:
+  draw-dev-pgdata:
