@@ -32,8 +32,12 @@
   border-color: var(--border);
 }
 
-.diagram-canvas {
+.diagram-viewport {
   overflow: hidden;
+  position: relative;
+}
+
+.diagram-canvas {
   position: relative;
 }
 
