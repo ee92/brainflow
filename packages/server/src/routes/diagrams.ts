@@ -18,6 +18,7 @@ import {
   restoreDiagram,
   updateDiagram,
 } from '../services/diagram.js';
+import type { LifecycleHooks } from '../types/context.js';
 import type { ApiSuccess, ApiSuccessWithMeta, ListMeta } from '../types/api.js';
 import type { DiagramRecord, DiagramSummary } from '../types/diagram.js';
 
@@ -43,13 +44,13 @@ function getDeleteVersion(req: Request): number {
   return version;
 }
 
-export function diagramsRouter(pool: Pool): Router {
+export function diagramsRouter(pool: Pool, hooks?: LifecycleHooks): Router {
   const router: Router = Router();
 
   router.get('/', validate({ query: listDiagramsSchema }), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const query = listDiagramsSchema.parse(req.query);
-      const result = await listDiagrams(pool, query);
+      const result = await listDiagrams(pool, req.ctx, query);
       const payload: ApiSuccessWithMeta<DiagramSummary[], ListMeta> = {
         ok: true,
         data: result.data,
@@ -68,7 +69,7 @@ export function diagramsRouter(pool: Pool): Router {
   router.get('/:slug', validate({ params: slugParamSchema }), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const params = slugParamSchema.parse(req.params);
-      const diagram = await getDiagram(pool, params.slug);
+      const diagram = await getDiagram(pool, req.ctx, params.slug);
       res.json({ ok: true, data: diagram } satisfies ApiSuccess<DiagramRecord>);
     } catch (error: unknown) {
       next(error);
@@ -78,7 +79,12 @@ export function diagramsRouter(pool: Pool): Router {
   router.post('/', validate({ body: createDiagramSchema }), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const body = createDiagramSchema.parse(req.body ?? {});
-      const diagram = await createDiagram(pool, body);
+      const diagram = await createDiagram(pool, req.ctx, body);
+
+      if (hooks?.onDiagramCreated) {
+        await hooks.onDiagramCreated(req.ctx, diagram);
+      }
+
       res.status(201).json({ ok: true, data: diagram } satisfies ApiSuccess<DiagramRecord>);
     } catch (error: unknown) {
       next(error);
@@ -92,7 +98,12 @@ export function diagramsRouter(pool: Pool): Router {
       try {
         const params = slugParamSchema.parse(req.params);
         const body = updateDiagramSchema.parse(req.body ?? {});
-        const diagram = await updateDiagram(pool, params.slug, body);
+        const diagram = await updateDiagram(pool, req.ctx, params.slug, body);
+
+        if (hooks?.onDiagramUpdated) {
+          await hooks.onDiagramUpdated(req.ctx, diagram);
+        }
+
         res.json({ ok: true, data: diagram } satisfies ApiSuccess<DiagramRecord>);
       } catch (error: unknown) {
         next(error);
@@ -105,7 +116,7 @@ export function diagramsRouter(pool: Pool): Router {
       const params = slugParamSchema.parse(req.params);
       const version: number = getDeleteVersion(req);
       const parsedVersion: DeleteDiagramInput = deleteDiagramSchema.parse({ version });
-      const diagram = await deleteDiagram(pool, params.slug, parsedVersion.version);
+      const diagram = await deleteDiagram(pool, req.ctx, params.slug, parsedVersion.version);
       res.json({ ok: true, data: diagram } satisfies ApiSuccess<DiagramRecord>);
     } catch (error: unknown) {
       next(error);
@@ -115,7 +126,7 @@ export function diagramsRouter(pool: Pool): Router {
   router.post('/:slug/restore', validate({ params: slugParamSchema }), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const params = slugParamSchema.parse(req.params);
-      const diagram = await restoreDiagram(pool, params.slug);
+      const diagram = await restoreDiagram(pool, req.ctx, params.slug);
       res.json({ ok: true, data: diagram } satisfies ApiSuccess<DiagramRecord>);
     } catch (error: unknown) {
       next(error);

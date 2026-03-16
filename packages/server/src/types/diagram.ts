@@ -2,6 +2,7 @@ export type DiagramType = 'mermaid';
 
 export interface DiagramRecord {
   id: number;
+  workspace_id: string;
   slug: string;
   title: string;
   description: string;
@@ -15,6 +16,7 @@ export interface DiagramRecord {
 
 export interface DiagramSummary {
   id: number;
+  workspace_id: string;
   slug: string;
   title: string;
   description: string;
