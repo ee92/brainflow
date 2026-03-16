@@ -8,8 +8,9 @@
     "packages/cli"
   ],
   "scripts": {
-    "build": "npm run build --workspace=packages/web",
-    "start": "node packages/server/src/index.js",
-    "test": "npm run test --workspaces"
+    "build": "npm run build --workspace=packages/server && npm run build --workspace=packages/web && npm run build --workspace=packages/cli",
+    "start": "node packages/server/dist/index.js",
+    "test": "npm run test --workspaces",
+    "typecheck": "npm run typecheck --workspace=packages/server && npm run typecheck --workspace=packages/web && npm run typecheck --workspace=packages/cli"
   }
 }
