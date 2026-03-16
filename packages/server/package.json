@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
-    "test": "node --test"
+    "build": "tsc -p tsconfig.json && mkdir -p dist/db/migrations && cp src/db/migrations/*.sql dist/db/migrations/",
+    "start": "node dist/index.js",
+    "test": "node --import tsx --test test/**/*.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -15,5 +17,12 @@
     "pino": "^9.0.0",
     "pino-http": "^9.0.0",
     "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "22.19.13",
+    "@types/pg": "8.16.0",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3"
   }
 }
