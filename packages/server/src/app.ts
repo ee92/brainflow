@@ -62,7 +62,7 @@ export function createApp({ logger, pool, readiness, config }: CreateAppDeps): E
           code: 'RATE_LIMITED',
           message: 'Too many requests. Try again in 30 seconds.',
           status: 429,
-          requestId: req.id,
+          requestId: String(req.id),
         },
       } satisfies ApiErrorResponse);
     },

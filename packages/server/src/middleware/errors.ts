@@ -38,7 +38,7 @@ function payloadTooLargeError(req: Request): ApiErrorResponse {
       code: 'PAYLOAD_TOO_LARGE',
       message: 'Content exceeds 500KB',
       status: 413,
-      requestId: req.id,
+      requestId: String(req.id),
     },
   };
 }
@@ -51,7 +51,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
         code: err.code,
         message: err.message,
         status: err.status,
-        requestId: req.id,
+        requestId: String(req.id),
       },
     } satisfies ApiErrorResponse);
   }
@@ -67,7 +67,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
         code: 'VALIDATION_ERROR',
         message: 'Request validation failed',
         status: 400,
-        requestId: req.id,
+        requestId: String(req.id),
       },
     } satisfies ApiErrorResponse);
   }
@@ -79,7 +79,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
       code: 'INTERNAL_ERROR',
       message: 'Unexpected server error',
       status: 500,
-      requestId: req.id,
+      requestId: String(req.id),
     },
   } satisfies ApiErrorResponse);
 }
