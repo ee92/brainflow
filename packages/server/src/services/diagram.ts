@@ -80,11 +80,16 @@ export async function createDiagram(pool: Pool, input: CreateDiagramInput): Prom
       [slug, input.title, input.description, input.content, input.diagram_type, tags],
     );
 
-    if (result.rowCount === 0) {
+    if (result.rowCount === 0 || result.rowCount === null) {
       throw new AppError('INTERNAL_ERROR', 'Failed to create diagram', 500);
     }
 
-    return result.rows[0];
+    const created: DiagramRecord | undefined = result.rows[0];
+    if (!created) {
+      throw new AppError('INTERNAL_ERROR', 'Failed to create diagram', 500);
+    }
+
+    return created;
   } catch (error: unknown) {
     return mapDuplicateSlugError(error, slug);
   }
@@ -139,13 +144,18 @@ export async function listDiagrams(pool: Pool, filters: ListDiagramsInput): Prom
     pool.query<CountRow>(countQuery, countValues),
   ]);
 
-  if (countResult.rowCount === 0) {
+  if (countResult.rowCount === 0 || countResult.rowCount === null) {
+    throw new AppError('INTERNAL_ERROR', 'Failed to count diagrams', 500);
+  }
+
+  const countRow: CountRow | undefined = countResult.rows[0];
+  if (!countRow) {
     throw new AppError('INTERNAL_ERROR', 'Failed to count diagrams', 500);
   }
 
   return {
     data: dataResult.rows,
-    total: countResult.rows[0].total,
+    total: countRow.total,
     limit: filters.limit,
     offset: filters.offset,
   };
@@ -159,11 +169,16 @@ export async function getDiagram(pool: Pool, slug: string): Promise<DiagramRecor
     [slug],
   );
 
-  if (result.rowCount === 0) {
+  if (result.rowCount === 0 || result.rowCount === null) {
     throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
   }
 
-  return result.rows[0];
+  const diagram: DiagramRecord | undefined = result.rows[0];
+  if (!diagram) {
+    throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
+  }
+
+  return diagram;
 }
 
 export async function updateDiagram(pool: Pool, slug: string, input: UpdateDiagramInput): Promise<DiagramRecord> {
@@ -174,11 +189,14 @@ export async function updateDiagram(pool: Pool, slug: string, input: UpdateDiagr
     [slug],
   );
 
-  if (currentResult.rowCount === 0) {
+  if (currentResult.rowCount === 0 || currentResult.rowCount === null) {
     throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
   }
 
-  const current: DiagramRecord = currentResult.rows[0];
+  const current: DiagramRecord | undefined = currentResult.rows[0];
+  if (!current) {
+    throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
+  }
 
   if (current.version !== input.version) {
     throw new AppError('VERSION_MISMATCH', 'Version does not match current diagram version', 412);
@@ -224,11 +242,16 @@ export async function updateDiagram(pool: Pool, slug: string, input: UpdateDiagr
     values,
   );
 
-  if (result.rowCount === 0) {
+  if (result.rowCount === 0 || result.rowCount === null) {
     throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
   }
 
-  return result.rows[0];
+  const updated: DiagramRecord | undefined = result.rows[0];
+  if (!updated) {
+    throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
+  }
+
+  return updated;
 }
 
 export async function deleteDiagram(pool: Pool, slug: string, version: number): Promise<DiagramRecord> {
@@ -237,11 +260,14 @@ export async function deleteDiagram(pool: Pool, slug: string, version: number): 
     [slug],
   );
 
-  if (currentResult.rowCount === 0) {
+  if (currentResult.rowCount === 0 || currentResult.rowCount === null) {
     throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
   }
 
-  const current = currentResult.rows[0];
+  const current: Pick<DiagramRecord, 'id' | 'version'> | undefined = currentResult.rows[0];
+  if (!current) {
+    throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
+  }
 
   if (current.version !== version) {
     throw new AppError('VERSION_MISMATCH', 'Version does not match current diagram version', 412);
@@ -255,11 +281,16 @@ export async function deleteDiagram(pool: Pool, slug: string, version: number): 
     [current.id],
   );
 
-  if (result.rowCount === 0) {
+  if (result.rowCount === 0 || result.rowCount === null) {
     throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
   }
 
-  return result.rows[0];
+  const deleted: DiagramRecord | undefined = result.rows[0];
+  if (!deleted) {
+    throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
+  }
+
+  return deleted;
 }
 
 export async function restoreDiagram(pool: Pool, slug: string): Promise<DiagramRecord> {
@@ -271,12 +302,17 @@ export async function restoreDiagram(pool: Pool, slug: string): Promise<DiagramR
     ),
   ]);
 
-  if (deletedResult.rowCount === 0) {
+  if (deletedResult.rowCount === 0 || deletedResult.rowCount === null) {
     throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
   }
 
-  if (activeResult.rowCount > 0) {
+  if (activeResult.rowCount !== null && activeResult.rowCount > 0) {
     throw new AppError('SLUG_CONFLICT', `A diagram with slug '${slug}' already exists`, 409);
+  }
+
+  const deletedRow: Pick<DiagramRecord, 'id'> | undefined = deletedResult.rows[0];
+  if (!deletedRow) {
+    throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
   }
 
   try {
@@ -285,14 +321,19 @@ export async function restoreDiagram(pool: Pool, slug: string): Promise<DiagramR
        SET deleted_at = NULL
        WHERE id = $1
        RETURNING id, slug, title, description, content, diagram_type, tags, version, created_at, updated_at`,
-      [deletedResult.rows[0].id],
+      [deletedRow.id],
     );
 
-    if (result.rowCount === 0) {
+    if (result.rowCount === 0 || result.rowCount === null) {
       throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
     }
 
-    return result.rows[0];
+    const restored: DiagramRecord | undefined = result.rows[0];
+    if (!restored) {
+      throw new AppError('NOT_FOUND', 'Diagram not found.', 404);
+    }
+
+    return restored;
   } catch (error: unknown) {
     return mapDuplicateSlugError(error, slug);
   }

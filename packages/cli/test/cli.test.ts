@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const execFileAsync = promisify(execFile);
 const __dirname: string = path.dirname(fileURLToPath(import.meta.url));
-const CLI: string = path.join(__dirname, '../dist/index.js');
+const CLI: string = path.join(__dirname, '../src/index.ts');
 
 interface RunResult {
   stdout: string;
@@ -35,7 +35,7 @@ function shellQuote(value: string): string {
 }
 
 async function run(args: string[], env: Record<string, string> = {}): Promise<RunResult> {
-  const command: string = `node ${shellQuote(CLI)} ${args.map(shellQuote).join(' ')}`.trim();
+  const command: string = `node --import tsx ${shellQuote(CLI)} ${args.map(shellQuote).join(' ')}`.trim();
   try {
     const result = await execFileAsync('bash', ['-lc', command], {
       env: { ...process.env, DRAW_API_URL: process.env.DRAW_API_URL || 'http://localhost:3030', ...env },

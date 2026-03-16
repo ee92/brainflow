@@ -48,8 +48,13 @@ export async function runMigrations(pool: Pool, logger: Logger, migrationsDir: s
         [filename],
       );
 
-      if (existing.rowCount > 0) {
-        if (existing.rows[0].checksum !== checksum) {
+      if (existing.rowCount !== null && existing.rowCount > 0) {
+        const existingRow: ChecksumRow | undefined = existing.rows[0];
+        if (!existingRow) {
+          throw new Error(`Missing migration row for ${filename}`);
+        }
+
+        if (existingRow.checksum !== checksum) {
           throw new Error(`Migration checksum mismatch for ${filename}`);
         }
         continue;

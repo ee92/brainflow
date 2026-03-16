@@ -93,11 +93,19 @@ interface RequestOptions {
 }
 
 async function request<TData>(path: string, options: RequestOptions = {}): Promise<{ response: Response; body: ApiResponse<TData> }> {
-  const response: Response = await fetch(`${baseUrl}${path}`, {
-    method: options.method,
+  const init: RequestInit = {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    body: options.body,
-  });
+  };
+
+  if (options.method) {
+    init.method = options.method;
+  }
+
+  if (options.body !== undefined) {
+    init.body = options.body;
+  }
+
+  const response: Response = await fetch(`${baseUrl}${path}`, init);
 
   const body: ApiResponse<TData> = await response.json();
   return { response, body };
@@ -290,7 +298,11 @@ describe('Diagram API', { concurrency: 1 }, (): void => {
     }
 
     assert.equal(body.data.length, 1);
-    assert.equal(Object.hasOwn(body.data[0], 'content'), false);
+    const first: DiagramPayload | undefined = body.data[0];
+    if (!first) {
+      throw new Error('Expected one diagram in list response');
+    }
+    assert.equal(Object.hasOwn(first, 'content'), false);
   });
 
   it('GET /api/v1/diagrams supports pagination (limit, offset)', async (): Promise<void> => {
@@ -320,7 +332,11 @@ describe('Diagram API', { concurrency: 1 }, (): void => {
     }
 
     assert.equal(body.data.length, 1);
-    assert.equal(body.data[0].slug, 'alpha');
+    const first: DiagramPayload | undefined = body.data[0];
+    if (!first) {
+      throw new Error('Expected one diagram after search');
+    }
+    assert.equal(first.slug, 'alpha');
   });
 
   it('GET /api/v1/diagrams supports tag filtering', async (): Promise<void> => {
@@ -334,7 +350,11 @@ describe('Diagram API', { concurrency: 1 }, (): void => {
     }
 
     assert.equal(body.data.length, 1);
-    assert.equal(body.data[0].slug, 'one');
+    const first: DiagramPayload | undefined = body.data[0];
+    if (!first) {
+      throw new Error('Expected one diagram after tag filter');
+    }
+    assert.equal(first.slug, 'one');
   });
 
   it('GET /api/v1/diagrams supports sorting (updated_at, created_at, title)', async (): Promise<void> => {
@@ -347,7 +367,11 @@ describe('Diagram API', { concurrency: 1 }, (): void => {
 
     assert.equal(byTitle.body.ok, true);
     if (byTitle.body.ok) {
-      assert.equal(byTitle.body.data[0].slug, 'alpha');
+      const first: DiagramPayload | undefined = byTitle.body.data[0];
+      if (!first) {
+        throw new Error('Expected at least one diagram for title sort');
+      }
+      assert.equal(first.slug, 'alpha');
     }
 
     assert.equal(byCreated.body.ok, true);

@@ -11,7 +11,7 @@ import './styles/global.css';
 import './styles/variables.css';
 
 if ('serviceWorker' in navigator) {
-  void navigator.serviceWorker.getRegistrations().then((registrations: ServiceWorkerRegistration[]): void => {
+  void navigator.serviceWorker.getRegistrations().then((registrations: readonly ServiceWorkerRegistration[]): void => {
     for (const registration of registrations) {
       void registration.unregister();
     }

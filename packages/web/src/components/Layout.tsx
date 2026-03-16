@@ -50,6 +50,8 @@ export function Layout({ slugFromRoot = '' }: LayoutProps): JSX.Element {
   const diagramQuery = useDiagram(slug);
 
   const diagrams: DiagramSummary[] = diagramsQuery.data?.ok ? diagramsQuery.data.data : [];
+  const selectedDiagram = diagramQuery.data?.ok ? diagramQuery.data.data : undefined;
+  const latestDiagram: DiagramSummary | undefined = diagrams[0];
   const total: number = diagramsQuery.data?.ok && diagramsQuery.data.meta ? diagramsQuery.data.meta.total : 0;
   const hasAnyDiagrams: boolean = total > 0 || diagrams.length > 0;
   const notFound: boolean = isApiClientError(diagramQuery.error) && diagramQuery.error.status === 404;
@@ -84,16 +86,16 @@ export function Layout({ slugFromRoot = '' }: LayoutProps): JSX.Element {
         {notFound ? <ErrorState message="Diagram not found." source="" /> : null}
         {!notFound ? (
           <DiagramViewer
-            diagram={diagramQuery.data?.ok ? diagramQuery.data.data : undefined}
+            diagram={selectedDiagram}
             isLoading={diagramQuery.isLoading}
             error={diagramQuery.error}
           />
         ) : null}
-        {!slug && diagrams.length > 0 ? (
+        {!slug && latestDiagram ? (
           <button
             type="button"
             className="open-latest"
-            onClick={(): void => navigate(`/d/${diagrams[0].slug}${q ? `?q=${encodeURIComponent(q)}` : ''}`)}
+            onClick={(): void => { void navigate(`/d/${latestDiagram.slug}${q ? `?q=${encodeURIComponent(q)}` : ''}`); }}
           >
             Open latest diagram
           </button>

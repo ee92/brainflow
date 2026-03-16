@@ -1,9 +1,16 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import cors from 'cors';
-import express, { type Express, type Request, type Response, type NextFunction } from 'express';
+import express, {
+  type ErrorRequestHandler,
+  type Express,
+  type NextFunction,
+  type Request,
+  type RequestHandler,
+  type Response,
+} from 'express';
 import rateLimit from 'express-rate-limit';
-import pinoHttp from 'pino-http';
+import { pinoHttp } from 'pino-http';
 import type { Pool } from 'pg';
 import type { Logger } from 'pino';
 import { requestId } from './middleware/requestId.js';
@@ -29,39 +36,42 @@ export function createApp({ logger, pool, readiness }: CreateAppDeps): Express {
   const app: Express = express();
   const publicDir: string = path.join(__dirname, '../public');
   const corsOrigin: string = process.env.CORS_ORIGIN || '*';
+  const jsonParser: Function = express.json({ limit: '1mb' });
+  const staticHandler: Function = express.static(publicDir);
+  const corsHandler: Function = cors({ origin: corsOrigin });
+  const httpLogger: Function = pinoHttp();
+  const rateLimitHandler: Function = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req: Request, res: Response): void => {
+      res.setHeader('Retry-After', '30');
+      res.status(429).json({
+        ok: false,
+        error: {
+          code: 'RATE_LIMITED',
+          message: 'Too many requests. Try again in 30 seconds.',
+          status: 429,
+          requestId: req.id,
+        },
+      } satisfies ApiErrorResponse);
+    },
+  });
+
+  const adaptMiddleware = (middleware: Function): RequestHandler => {
+    return (req: Request, res: Response, next: NextFunction): void => {
+      Reflect.apply(middleware, undefined, [req, res, (): void => next()]);
+    };
+  };
+  const handleErrors: ErrorRequestHandler = errorHandler;
 
   app.use(requestId);
-  app.use(
-    pinoHttp({
-      logger,
-      genReqId: (req: Request): string => req.id,
-    }),
-  );
-
-  app.use(express.json({ limit: '1mb' }));
-  app.use(
-    rateLimit({
-      windowMs: 60 * 1000,
-      limit: 100,
-      standardHeaders: true,
-      legacyHeaders: false,
-      handler: (req: Request, res: Response): void => {
-        res.setHeader('Retry-After', '30');
-        res.status(429).json({
-          ok: false,
-          error: {
-            code: 'RATE_LIMITED',
-            message: 'Too many requests. Try again in 30 seconds.',
-            status: 429,
-            requestId: req.id,
-          },
-        } satisfies ApiErrorResponse);
-      },
-    }),
-  );
-
-  app.use(cors({ origin: corsOrigin }));
-  app.use(express.static(publicDir));
+  app.use(adaptMiddleware(httpLogger));
+  app.use(adaptMiddleware(jsonParser));
+  app.use(adaptMiddleware(rateLimitHandler));
+  app.use(adaptMiddleware(corsHandler));
+  app.use(adaptMiddleware(staticHandler));
 
   app.use(healthRouter(async (): Promise<{ ok: boolean }> => {
     if (!readiness.migrations) {
@@ -93,7 +103,7 @@ export function createApp({ logger, pool, readiness }: CreateAppDeps): Express {
     res.sendFile(path.join(publicDir, 'index.html'));
   });
 
-  app.use(errorHandler);
+  app.use(handleErrors);
 
   return app;
 }

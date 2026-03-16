@@ -76,8 +76,12 @@ test('applies migrations in order', async (): Promise<void> => {
       const result = await pool.query<{ one_name: string | null; two_name: string | null }>(
         `SELECT to_regclass('public.one') AS one_name, to_regclass('public.two') AS two_name`,
       );
-      assert.equal(result.rows[0].one_name, 'one');
-      assert.equal(result.rows[0].two_name, 'two');
+      const first: { one_name: string | null; two_name: string | null } | undefined = result.rows[0];
+      if (!first) {
+        throw new Error('Expected a migration verification row');
+      }
+      assert.equal(first.one_name, 'one');
+      assert.equal(first.two_name, 'two');
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -94,7 +98,11 @@ test('skips already-applied migrations', async (): Promise<void> => {
       await runMigrations(pool, pino({ enabled: false }), dir);
       await runMigrations(pool, pino({ enabled: false }), dir);
       const count = await pool.query<{ count: number }>('SELECT COUNT(*)::int AS count FROM schema_migrations');
-      assert.equal(count.rows[0].count, 1);
+      const countRow: { count: number } | undefined = count.rows[0];
+      if (!countRow) {
+        throw new Error('Expected migration count row');
+      }
+      assert.equal(countRow.count, 1);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -136,7 +144,11 @@ test('handles concurrent startup (advisory lock)', async (): Promise<void> => {
       ]);
 
       const count = await pool.query<{ count: number }>('SELECT COUNT(*)::int AS count FROM schema_migrations');
-      assert.equal(count.rows[0].count, 2);
+      const countRow: { count: number } | undefined = count.rows[0];
+      if (!countRow) {
+        throw new Error('Expected migration count row');
+      }
+      assert.equal(countRow.count, 2);
     } finally {
       await secondPool.end();
       await rm(dir, { recursive: true, force: true });

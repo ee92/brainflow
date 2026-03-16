@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, type NavigateFunction } from 'react-router-dom';
-import panzoom, { type PanZoomController } from 'panzoom';
+import panzoom, { type PanZoom } from 'panzoom';
 import type { ApiClientError, Diagram } from '../types/models';
 import { ErrorState } from './ErrorState';
 import { LoadingSkeleton } from './LoadingSkeleton';
@@ -23,7 +23,7 @@ interface ClickLink {
 type ClickLinks = Record<string, ClickLink>;
 
 interface DiagramViewerProps {
-  diagram?: Diagram;
+  diagram: Diagram | undefined;
   isLoading: boolean;
   error: Error | ApiClientError | null;
 }
@@ -67,7 +67,11 @@ function parseClickDirectives(content: string): ClickLinks {
   for (const line of lines) {
     const match: RegExpMatchArray | null = line.trim().match(/^click\s+(\S+)\s+"([^"]+)"(?:\s+"([^"]+)")?/);
     if (match) {
-      links[match[1]] = { url: match[2], tooltip: match[3] || '' };
+      const nodeId: string | undefined = match[1];
+      const url: string | undefined = match[2];
+      if (nodeId && url) {
+        links[nodeId] = { url, tooltip: match[3] || '' };
+      }
     }
   }
 
@@ -185,14 +189,14 @@ function attachClickHandlers(container: HTMLDivElement, clickLinks: ClickLinks, 
 export function DiagramViewer({ diagram, isLoading, error }: DiagramViewerProps): JSX.Element | null {
   const viewerRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
-  const panzoomRef = useRef<PanZoomController | null>(null);
+  const panzoomRef = useRef<PanZoom | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [showRaw, setShowRaw] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const navigate: NavigateFunction = useNavigate();
 
   const fitToScreen = useCallback((): void => {
-    const pz: PanZoomController | null = panzoomRef.current;
+    const pz: PanZoom | null = panzoomRef.current;
     const root: HTMLElement | null = viewerRef.current;
     const canvas: HTMLDivElement | null = canvasRef.current;
     if (!pz || !root || !canvas) {

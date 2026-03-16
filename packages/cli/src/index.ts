@@ -2,18 +2,25 @@
 
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
-import { Command, CommanderError } from 'commander';
-
-const EXIT = {
-  SUCCESS: 0,
-  GENERAL: 1,
-  INPUT: 2,
-  NOT_FOUND: 3,
-  CONFLICT: 4,
-  NETWORK: 5,
-};
+import { Command } from 'commander';
 
 type ExitCode = 0 | 1 | 2 | 3 | 4 | 5;
+
+const EXIT_SUCCESS: ExitCode = 0;
+const EXIT_GENERAL: ExitCode = 1;
+const EXIT_INPUT: ExitCode = 2;
+const EXIT_NOT_FOUND: ExitCode = 3;
+const EXIT_CONFLICT: ExitCode = 4;
+const EXIT_NETWORK: ExitCode = 5;
+
+const EXIT = {
+  SUCCESS: EXIT_SUCCESS,
+  GENERAL: EXIT_GENERAL,
+  INPUT: EXIT_INPUT,
+  NOT_FOUND: EXIT_NOT_FOUND,
+  CONFLICT: EXIT_CONFLICT,
+  NETWORK: EXIT_NETWORK,
+};
 
 type QueryValue = string | number | string[] | undefined | null;
 type QueryRecord = Record<string, QueryValue>;
@@ -57,7 +64,7 @@ interface Diagram extends DiagramSummary {
 }
 
 interface CliErrorLike {
-  code: number;
+  code: unknown;
   stdout?: string;
   stderr?: string;
   status?: number;
@@ -104,6 +111,15 @@ function isCliErrorLike(value: unknown): value is CliErrorLike {
   return 'code' in value;
 }
 
+function isExitCode(value: unknown): value is ExitCode {
+  return value === EXIT.SUCCESS
+    || value === EXIT.GENERAL
+    || value === EXIT.INPUT
+    || value === EXIT.NOT_FOUND
+    || value === EXIT.CONFLICT
+    || value === EXIT.NETWORK;
+}
+
 function buildApiUrl(pathSegment: string, query: QueryRecord | null = null): URL {
   const url: URL = new URL(`${API_BASE}/api/v1${pathSegment}`);
   if (query) {
@@ -140,11 +156,16 @@ async function apiRequest<TData>(pathSegment: string, { method = 'GET', query, b
 
   let response: Response;
   try {
-    response = await fetch(buildApiUrl(pathSegment, query || null), {
+    const requestInit: RequestInit = {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
+    };
+
+    if (body !== undefined) {
+      requestInit.body = JSON.stringify(body);
+    }
+
+    response = await fetch(buildApiUrl(pathSegment, query || null), requestInit);
   } catch (_error: unknown) {
     throw new CliError('Network error: failed to reach API server', EXIT.NETWORK);
   }
@@ -344,7 +365,6 @@ const program: Command = new Command();
 program
   .name('draw')
   .description('CLI for Brainflow diagrams')
-  .exitOverride()
   .showHelpAfterError();
 
 program
@@ -532,20 +552,12 @@ async function main(): Promise<void> {
   try {
     await program.parseAsync(process.argv);
   } catch (error: unknown) {
-    if (error instanceof CommanderError) {
-      if (error.code === 'commander.helpDisplayed' || error.code === 'commander.version') {
-        return;
-      }
-      process.stderr.write(`${error.message}\n`);
-      process.exit(error.exitCode || EXIT.INPUT);
-    }
-
     if (error instanceof CliError) {
       process.stderr.write(`${error.message}\n`);
       process.exit(error.code);
     }
 
-    if (isCliErrorLike(error) && typeof error.code === 'number') {
+    if (isCliErrorLike(error) && isExitCode(error.code)) {
       process.stderr.write(`${String(error)}\n`);
       process.exit(error.code);
     }
