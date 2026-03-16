@@ -1,0 +1,45 @@
+.layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  height: 100%;
+  overflow: hidden;
+}
+
+.layout.sidebar-collapsed {
+  grid-template-columns: 0 1fr;
+}
+
+/* Floating toggle button when sidebar is collapsed */
+.sidebar-toggle-float {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.sidebar-toggle-float:hover {
+  background: var(--bg-tertiary);
+}
+
+.main-panel {
+  min-width: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at top left, var(--bg-tertiary), var(--bg-primary) 60%);
+}
+
+.open-latest {
+  margin: 2rem;
+}
+
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

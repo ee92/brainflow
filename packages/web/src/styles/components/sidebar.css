@@ -1,0 +1,72 @@
+.sidebar {
+  width: var(--sidebar-width);
+  border-right: 1px solid var(--border);
+  background: var(--bg-secondary);
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+
+.sidebar.collapsed {
+  width: 0;
+  border-right: 0;
+}
+
+.sidebar-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 0.75rem;
+}
+
+.search-bar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.search-bar input {
+  flex: 1;
+}
+
+.diagram-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem;
+  overflow: auto;
+  height: calc(100% - 96px);
+}
+
+.diagram-list li {
+  padding: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.diagram-list li.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.diagram-list h4 {
+  margin: 0 0 0.3rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.3rem;
+}
+
+.tag-pill {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.75rem;
+}
