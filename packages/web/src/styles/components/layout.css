@@ -9,26 +9,24 @@
   grid-template-columns: 0 1fr;
 }
 
-/* Floating toggle button when sidebar is collapsed */
-.sidebar-toggle-float {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 100;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.45rem 0.65rem;
+/* Hamburger sits inside the toolbar row instead of floating over it */
+.sidebar-toggle-inline {
+  background: none;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 0.3rem 0.5rem;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  transition: background 0.15s;
+  margin-right: 0.3rem;
+  transition: color 0.1s, background 0.1s;
 }
 
-.sidebar-toggle-float:hover {
+.sidebar-toggle-inline:hover {
+  color: var(--text-primary);
   background: var(--bg-tertiary);
+  border-color: var(--border);
 }
 
 .main-panel {
