@@ -115,6 +115,17 @@ graph LR
 
 Clicking "API Server" navigates to the `api-server-detail` diagram.
 
+## OpenClaw Integration
+
+If you're running [OpenClaw](https://github.com/openclaw/openclaw), Brainflow ships with an agent skill that lets your AI create and manage diagrams via natural language.
+
+```bash
+# Copy the skill into your OpenClaw workspace
+cp -r skill ~/.openclaw/workspace/skills/draw
+```
+
+Then just ask your agent to "draw me an architecture diagram" — it hits the local API automatically.
+
 ## Development
 
 ```bash
