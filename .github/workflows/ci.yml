@@ -34,25 +34,26 @@ jobs:
 
       - run: npm ci
 
+      - name: Type check
+        run: |
+          npx tsc --noEmit -p packages/server/tsconfig.test.json
+          npx tsc --noEmit -p packages/web/tsconfig.json
+          npx tsc --noEmit -p packages/cli/tsconfig.test.json
+
       - name: Server tests
-        run: node --test packages/server/test/*.test.js
+        run: node --import tsx --test packages/server/test/*.test.ts
         env:
           DATABASE_URL: postgres://draw:draw@localhost:5432/draw
 
       - name: CLI tests
-        run: node --test packages/cli/test/*.test.js
+        run: node --import tsx --test packages/cli/test/*.test.ts
 
       - name: Build frontend
         run: npm run build --workspace=packages/web
-
-      - name: Syntax check
-        run: |
-          node --check packages/server/src/index.js
-          node --check packages/cli/src/index.js
 
   docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build Docker image
-        run: docker build -t draw-test .
+        run: docker build -t brainflow-test .
