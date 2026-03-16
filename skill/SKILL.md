@@ -1,6 +1,6 @@
 ---
 name: draw
-description: Create, update, list, and view architecture diagrams on draw.bots.town. Use when the user asks for a diagram, architecture visualization, system overview, flowchart, or wants to see/edit existing diagrams. Supports Mermaid syntax with C4 architecture conventions.
+description: Create, update, list, and view architecture diagrams on localhost:3030. Use when the user asks for a diagram, architecture visualization, system overview, flowchart, or wants to see/edit existing diagrams. Supports Mermaid syntax with C4 architecture conventions.
 metadata:
   {
     "openclaw": { "emoji": "📐" }
@@ -9,7 +9,7 @@ metadata:
 
 # Draw — Diagram Manager
 
-Create and manage architecture diagrams at `draw.bots.town`.
+Create and manage architecture diagrams at `localhost:3030`.
 
 ## API
 
@@ -81,7 +81,7 @@ Base: `http://localhost:3030/api/v1`
 ### Creating a diagram
 1. Generate Mermaid content (see Diagram Types below)
 2. POST to `/diagrams`
-3. Send user the link: `https://draw.bots.town/d/{slug}`
+3. Send user the link: `http://localhost:3030/d/{slug}`
 
 ### Updating a diagram
 1. GET `/diagrams/:slug` to get current version
@@ -177,5 +177,5 @@ sequenceDiagram
 - **Use `<small>` tags** for secondary info in node labels (ports, tech stack)
 - Keep diagrams focused — one concept per diagram, not everything at once
 - Tag consistently: project name + diagram type (e.g. `swap-win`, `architecture`)
-- After creating/updating, always send the user the URL: `https://draw.bots.town/d/{slug}`
+- After creating/updating, always send the user the URL: `http://localhost:3030/d/{slug}`
 - For complex systems, create multiple diagrams at different zoom levels
