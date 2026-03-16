@@ -378,7 +378,9 @@ export function DiagramViewer({ slug, diagram, isLoading, error, sidebarCollapse
         }}
       />
       {copied ? <div className="copy-toast">Copied!</div> : null}
-      <div className="diagram-canvas" ref={canvasRef} />
+      <div className="diagram-viewport">
+        <div className="diagram-canvas" ref={canvasRef} />
+      </div>
       {showRaw ? <pre className="raw-source">{diagram.content}</pre> : null}
     </section>
   );
