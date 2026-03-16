@@ -14,7 +14,11 @@ export function Sidebar({ diagrams, query, onSearch, collapsed, onToggle }: Side
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
-        <button type="button" onClick={onToggle} aria-label="Toggle sidebar">☰</button>
+        <div className="sidebar-brand">
+          <span className="brand-logo">🧠</span>
+          <span className="brand-name">Brainflow</span>
+        </div>
+        <button type="button" className="sidebar-close" onClick={onToggle} aria-label="Close sidebar">✕</button>
       </div>
       <SearchBar value={query} onSearch={onSearch} />
       <DiagramList diagrams={diagrams} query={query} />

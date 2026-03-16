@@ -7,18 +7,29 @@
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem;
+  gap: 0.3rem;
+  padding: 0 0.5rem;
   border-bottom: 1px solid var(--border);
   background: var(--bg-secondary);
+  overflow-x: auto;
 }
 
 .toolbar button {
-  background: var(--bg-tertiary);
+  background: none;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.1s, background 0.1s;
+}
+
+.toolbar button:hover {
   color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.35rem 0.55rem;
+  background: var(--bg-tertiary);
+  border-color: var(--border);
 }
 
 .diagram-canvas {
@@ -35,10 +46,12 @@
   margin: 0;
   max-height: 30vh;
   overflow: auto;
-  background: #111;
-  color: #ddd;
+  background: #0a0a0a;
+  color: #c0c0c0;
   padding: 1rem;
   border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  line-height: 1.5;
 }
 
 .copy-toast {
@@ -47,23 +60,38 @@
   right: 1rem;
   background: var(--success);
   color: #fff;
-  padding: 0.4rem 0.6rem;
+  padding: 0.35rem 0.6rem;
   border-radius: 4px;
+  font-size: 0.8rem;
+  z-index: 10;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .error-state {
   margin: 1rem;
   border: 1px solid var(--error);
-  background: color-mix(in srgb, var(--error) 10%, transparent);
+  background: color-mix(in srgb, var(--error) 8%, transparent);
   border-radius: 8px;
   padding: 1rem;
 }
 
+.error-state h3 {
+  margin: 0 0 0.5rem;
+  color: var(--error);
+}
+
 .error-state pre {
-  background: #111;
-  color: #ddd;
+  background: #0a0a0a;
+  color: #c0c0c0;
   padding: 0.75rem;
   overflow: auto;
+  border-radius: 4px;
+  font-size: 0.8rem;
 }
 
 .loading-skeleton {
@@ -93,13 +121,20 @@
 }
 
 @keyframes pulse {
-  0% {
-    opacity: 0.55;
+  0% { opacity: 0.55; }
+  50% { opacity: 1; }
+  100% { opacity: 0.55; }
+}
+
+/* Mobile toolbar */
+@media (max-width: 768px) {
+  .toolbar {
+    padding: 0 0.3rem;
+    gap: 0.15rem;
   }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.55;
+
+  .toolbar button {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.35rem;
   }
 }

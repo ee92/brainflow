@@ -66,6 +66,13 @@ export function Layout({ slugFromRoot = '' }: LayoutProps): JSX.Element {
           aria-label="Open sidebar"
         >☰</button>
       ) : null}
+      {!collapsed && isMobile ? (
+        <div
+          className="sidebar-backdrop"
+          onClick={(): void => setCollapsed(true)}
+          role="presentation"
+        />
+      ) : null}
       <Sidebar
         diagrams={diagrams}
         query={q}
