@@ -1,5 +1,6 @@
 export interface Diagram {
   id: number;
+  workspace_id: string;
   slug: string;
   title: string;
   description: string;
@@ -13,6 +14,7 @@ export interface Diagram {
 
 export interface DiagramSummary {
   id: number;
+  workspace_id: string;
   slug: string;
   title: string;
   description: string;

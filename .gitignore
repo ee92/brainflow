@@ -3,3 +3,4 @@ packages/web/dist
 .env
 backups/
 VISION.md
+packages/server/dist

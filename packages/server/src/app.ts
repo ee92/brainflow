@@ -14,9 +14,11 @@ import { pinoHttp } from 'pino-http';
 import type { Pool } from 'pg';
 import type { Logger } from 'pino';
 import { requestId } from './middleware/requestId.js';
+import { contextMiddleware } from './middleware/context.js';
 import { errorHandler } from './middleware/errors.js';
 import { diagramsRouter } from './routes/diagrams.js';
 import { healthRouter } from './routes/health.js';
+import type { BrainflowConfig } from './types/context.js';
 import type { ApiErrorResponse } from './types/api.js';
 
 const __filename: string = fileURLToPath(import.meta.url);
@@ -30,12 +32,19 @@ interface CreateAppDeps {
   logger: Logger;
   pool: Pool;
   readiness: ReadinessState;
+  config?: BrainflowConfig;
 }
 
-export function createApp({ logger, pool, readiness }: CreateAppDeps): Express {
+/**
+ * Create a configured Brainflow Express application.
+ *
+ * Self-hosted: pass only logger, pool, and readiness. All defaults apply.
+ * Cloud: pass a BrainflowConfig with getContext hook for auth/workspace resolution.
+ */
+export function createApp({ logger, pool, readiness, config }: CreateAppDeps): Express {
   const app: Express = express();
   const publicDir: string = path.join(__dirname, '../public');
-  const corsOrigin: string = process.env.CORS_ORIGIN || '*';
+  const corsOrigin: string = config?.corsOrigin ?? process.env.CORS_ORIGIN ?? '*';
   const jsonParser: Function = express.json({ limit: '1mb' });
   const staticHandler: Function = express.static(publicDir);
   const corsHandler: Function = cors({ origin: corsOrigin });
@@ -53,7 +62,7 @@ export function createApp({ logger, pool, readiness }: CreateAppDeps): Express {
           code: 'RATE_LIMITED',
           message: 'Too many requests. Try again in 30 seconds.',
           status: 429,
-          requestId: req.id,
+          requestId: String(req.id),
         },
       } satisfies ApiErrorResponse);
     },
@@ -71,6 +80,7 @@ export function createApp({ logger, pool, readiness }: CreateAppDeps): Express {
   app.use(adaptMiddleware(jsonParser));
   app.use(adaptMiddleware(rateLimitHandler));
   app.use(adaptMiddleware(corsHandler));
+  app.use(contextMiddleware(config?.getContext));
   app.use(adaptMiddleware(staticHandler));
 
   app.use(healthRouter(async (): Promise<{ ok: boolean }> => {
@@ -82,7 +92,7 @@ export function createApp({ logger, pool, readiness }: CreateAppDeps): Express {
     return { ok: true };
   }));
 
-  app.use('/api/v1/diagrams', diagramsRouter(pool));
+  app.use('/api/v1/diagrams', diagramsRouter(pool, config?.hooks));
 
   app.get('*', (req: Request, res: Response, next: NextFunction): void => {
     if (req.path.startsWith('/api/')) {

@@ -5,6 +5,7 @@ import type {
   ListDiagramsInput,
   UpdateDiagramInput,
 } from '../schemas/diagram.js';
+import type { AppContext } from '../types/context.js';
 import type { DiagramRecord, DiagramSummary } from '../types/diagram.js';
 
 interface CountRow {
@@ -68,16 +69,22 @@ function parseTagFilter(tagsParam?: string): string[] {
   return normalizeTags(tagsParam.split(','));
 }
 
-export async function createDiagram(pool: Pool, input: CreateDiagramInput): Promise<DiagramRecord> {
+/** Column list for full diagram records (used in RETURNING clauses). */
+const DIAGRAM_COLUMNS: string = 'id, workspace_id, slug, title, description, content, diagram_type, tags, version, created_at, updated_at';
+
+/** Column list for diagram summaries (no content). */
+const SUMMARY_COLUMNS: string = 'id, workspace_id, slug, title, description, diagram_type, tags, version, created_at, updated_at';
+
+export async function createDiagram(pool: Pool, ctx: AppContext, input: CreateDiagramInput): Promise<DiagramRecord> {
   const slug: string = input.slug ?? slugify(input.title);
   const tags: string[] = normalizeTags(input.tags);
 
   try {
     const result = await pool.query<DiagramRecord>(
-      `INSERT INTO diagrams (slug, title, description, content, diagram_type, tags)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, slug, title, description, content, diagram_type, tags, version, created_at, updated_at`,
-      [slug, input.title, input.description, input.content, input.diagram_type, tags],
+      `INSERT INTO diagrams (workspace_id, slug, title, description, content, diagram_type, tags)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING ${DIAGRAM_COLUMNS}`,
+      [ctx.workspaceId, slug, input.title, input.description, input.content, input.diagram_type, tags],
     );
 
     if (result.rowCount === 0 || result.rowCount === null) {
@@ -95,9 +102,9 @@ export async function createDiagram(pool: Pool, input: CreateDiagramInput): Prom
   }
 }
 
-export async function listDiagrams(pool: Pool, filters: ListDiagramsInput): Promise<DiagramListResult> {
-  const where: string[] = ['deleted_at IS NULL'];
-  const values: Array<string | number | string[]> = [];
+export async function listDiagrams(pool: Pool, ctx: AppContext, filters: ListDiagramsInput): Promise<DiagramListResult> {
+  const where: string[] = ['workspace_id = $1', 'deleted_at IS NULL'];
+  const values: Array<string | number | string[]> = [ctx.workspaceId];
 
   if (filters.search) {
     values.push(filters.search);
@@ -126,7 +133,7 @@ export async function listDiagrams(pool: Pool, filters: ListDiagramsInput): Prom
 
   const whereSql: string = `WHERE ${where.join(' AND ')}`;
   const dataQuery: string = `
-    SELECT id, slug, title, description, diagram_type, tags, version, created_at, updated_at
+    SELECT ${SUMMARY_COLUMNS}
     FROM diagrams
     ${whereSql}
     ORDER BY ${sortField} ${sortOrder}, id DESC
@@ -134,9 +141,8 @@ export async function listDiagrams(pool: Pool, filters: ListDiagramsInput): Prom
     OFFSET ${offsetRef}
   `;
 
-  const countValues: Array<string | string[]> = values.slice(0, values.length - 2).filter(
-    (value: string | number | string[]): value is string | string[] => typeof value !== 'number',
-  );
+  /* Count query uses all WHERE params except limit/offset. */
+  const countValues: Array<string | number | string[]> = values.slice(0, values.length - 2);
   const countQuery: string = `SELECT COUNT(*)::int AS total FROM diagrams ${whereSql}`;
 
   const [dataResult, countResult] = await Promise.all([
@@ -161,12 +167,12 @@ export async function listDiagrams(pool: Pool, filters: ListDiagramsInput): Prom
   };
 }
 
-export async function getDiagram(pool: Pool, slug: string): Promise<DiagramRecord> {
+export async function getDiagram(pool: Pool, ctx: AppContext, slug: string): Promise<DiagramRecord> {
   const result = await pool.query<DiagramRecord>(
-    `SELECT id, slug, title, description, content, diagram_type, tags, version, created_at, updated_at
+    `SELECT ${DIAGRAM_COLUMNS}
      FROM diagrams
-     WHERE slug = $1 AND deleted_at IS NULL`,
-    [slug],
+     WHERE workspace_id = $1 AND slug = $2 AND deleted_at IS NULL`,
+    [ctx.workspaceId, slug],
   );
 
   if (result.rowCount === 0 || result.rowCount === null) {
@@ -181,12 +187,12 @@ export async function getDiagram(pool: Pool, slug: string): Promise<DiagramRecor
   return diagram;
 }
 
-export async function updateDiagram(pool: Pool, slug: string, input: UpdateDiagramInput): Promise<DiagramRecord> {
+export async function updateDiagram(pool: Pool, ctx: AppContext, slug: string, input: UpdateDiagramInput): Promise<DiagramRecord> {
   const currentResult = await pool.query<DiagramRecord>(
-    `SELECT id, version, slug, title, description, content, diagram_type, tags, created_at, updated_at
+    `SELECT ${DIAGRAM_COLUMNS}
      FROM diagrams
-     WHERE slug = $1 AND deleted_at IS NULL`,
-    [slug],
+     WHERE workspace_id = $1 AND slug = $2 AND deleted_at IS NULL`,
+    [ctx.workspaceId, slug],
   );
 
   if (currentResult.rowCount === 0 || currentResult.rowCount === null) {
@@ -232,13 +238,14 @@ export async function updateDiagram(pool: Pool, slug: string, input: UpdateDiagr
     };
   }
 
+  values.push(ctx.workspaceId);
   values.push(slug);
 
   const result = await pool.query<DiagramRecord>(
     `UPDATE diagrams
      SET ${updates.join(', ')}
-     WHERE slug = $${values.length} AND deleted_at IS NULL
-     RETURNING id, slug, title, description, content, diagram_type, tags, version, created_at, updated_at`,
+     WHERE workspace_id = $${values.length - 1} AND slug = $${values.length} AND deleted_at IS NULL
+     RETURNING ${DIAGRAM_COLUMNS}`,
     values,
   );
 
@@ -254,10 +261,10 @@ export async function updateDiagram(pool: Pool, slug: string, input: UpdateDiagr
   return updated;
 }
 
-export async function deleteDiagram(pool: Pool, slug: string, version: number): Promise<DiagramRecord> {
+export async function deleteDiagram(pool: Pool, ctx: AppContext, slug: string, version: number): Promise<DiagramRecord> {
   const currentResult = await pool.query<Pick<DiagramRecord, 'id' | 'version'>>(
-    `SELECT id, version FROM diagrams WHERE slug = $1 AND deleted_at IS NULL`,
-    [slug],
+    `SELECT id, version FROM diagrams WHERE workspace_id = $1 AND slug = $2 AND deleted_at IS NULL`,
+    [ctx.workspaceId, slug],
   );
 
   if (currentResult.rowCount === 0 || currentResult.rowCount === null) {
@@ -277,7 +284,7 @@ export async function deleteDiagram(pool: Pool, slug: string, version: number): 
     `UPDATE diagrams
      SET deleted_at = NOW()
      WHERE id = $1 AND deleted_at IS NULL
-     RETURNING id, slug, title, description, content, diagram_type, tags, version, created_at, updated_at`,
+     RETURNING ${DIAGRAM_COLUMNS}`,
     [current.id],
   );
 
@@ -293,12 +300,15 @@ export async function deleteDiagram(pool: Pool, slug: string, version: number): 
   return deleted;
 }
 
-export async function restoreDiagram(pool: Pool, slug: string): Promise<DiagramRecord> {
+export async function restoreDiagram(pool: Pool, ctx: AppContext, slug: string): Promise<DiagramRecord> {
   const [activeResult, deletedResult] = await Promise.all([
-    pool.query<Pick<DiagramRecord, 'id'>>(`SELECT id FROM diagrams WHERE slug = $1 AND deleted_at IS NULL LIMIT 1`, [slug]),
     pool.query<Pick<DiagramRecord, 'id'>>(
-      `SELECT id FROM diagrams WHERE slug = $1 AND deleted_at IS NOT NULL ORDER BY updated_at DESC LIMIT 1`,
-      [slug],
+      `SELECT id FROM diagrams WHERE workspace_id = $1 AND slug = $2 AND deleted_at IS NULL LIMIT 1`,
+      [ctx.workspaceId, slug],
+    ),
+    pool.query<Pick<DiagramRecord, 'id'>>(
+      `SELECT id FROM diagrams WHERE workspace_id = $1 AND slug = $2 AND deleted_at IS NOT NULL ORDER BY updated_at DESC LIMIT 1`,
+      [ctx.workspaceId, slug],
     ),
   ]);
 
@@ -320,7 +330,7 @@ export async function restoreDiagram(pool: Pool, slug: string): Promise<DiagramR
       `UPDATE diagrams
        SET deleted_at = NULL
        WHERE id = $1
-       RETURNING id, slug, title, description, content, diagram_type, tags, version, created_at, updated_at`,
+       RETURNING ${DIAGRAM_COLUMNS}`,
       [deletedRow.id],
     );
 

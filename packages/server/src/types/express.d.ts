@@ -1,8 +1,11 @@
-import type { Logger } from 'pino';
+import type { AppContext } from './context.js';
 
-declare module 'express-serve-static-core' {
-  interface Request {
-    id: string;
-    log?: Logger;
+declare global {
+  namespace Express {
+    interface Request {
+      /** Per-request context resolved by contextMiddleware. */
+      ctx: AppContext;
+    }
   }
 }
+
