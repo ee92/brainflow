@@ -246,6 +246,15 @@ export function DiagramViewer({ slug, diagram, isLoading, error, sidebarCollapse
     pz.zoomAbs(0, 0, scale);
   }, []);
 
+  // Save viewport when navigating away — runs on slug change only,
+  // independent of async diagram loading so the save window isn't missed.
+  useEffect((): void => {
+    if (prevSlugRef.current && prevSlugRef.current !== slug) {
+      saveCurrentViewport();
+    }
+    prevSlugRef.current = slug;
+  }, [slug, saveCurrentViewport]);
+
   useEffect((): (() => void) => {
     let cancelled = false;
 
@@ -253,12 +262,6 @@ export function DiagramViewer({ slug, diagram, isLoading, error, sidebarCollapse
       if (!diagram?.content || !canvasRef.current) {
         return;
       }
-
-      // Save viewport of previous diagram before switching
-      if (prevSlugRef.current && prevSlugRef.current !== slug) {
-        saveCurrentViewport();
-      }
-      prevSlugRef.current = slug;
 
       setRenderError(null);
       canvasRef.current.innerHTML = '';
