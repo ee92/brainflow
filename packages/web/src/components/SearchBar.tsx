@@ -19,16 +19,15 @@ export function SearchBar({ value = '', onSearch }: SearchBarProps): JSX.Element
 
   return (
     <div className="search-bar">
-      <span aria-hidden="true" className="search-icon">🔎</span>
       <input
         aria-label="Search diagrams"
         value={draft}
         onChange={(event: ChangeEvent<HTMLInputElement>): void => setDraft(event.target.value)}
-        placeholder="Search diagrams"
+        placeholder="Search diagrams..."
       />
       {draft ? (
-        <button type="button" aria-label="Clear search" onClick={(): void => setDraft('')}>
-          Clear
+        <button type="button" className="search-clear" aria-label="Clear search" onClick={(): void => setDraft('')}>
+          ✕
         </button>
       ) : null}
     </div>

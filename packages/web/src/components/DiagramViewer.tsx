@@ -28,6 +28,8 @@ interface DiagramViewerProps {
   diagram: Diagram | undefined;
   isLoading: boolean;
   error: Error | ApiClientError | null;
+  sidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
 }
 
 let mermaidLoader: Promise<MermaidApi> | undefined;
@@ -188,7 +190,7 @@ function attachClickHandlers(container: HTMLDivElement, clickLinks: ClickLinks, 
   }
 }
 
-export function DiagramViewer({ slug, diagram, isLoading, error }: DiagramViewerProps): JSX.Element | null {
+export function DiagramViewer({ slug, diagram, isLoading, error, sidebarCollapsed, onToggleSidebar }: DiagramViewerProps): JSX.Element | null {
   const viewerRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const panzoomRef = useRef<PanZoom | null>(null);
@@ -244,6 +246,15 @@ export function DiagramViewer({ slug, diagram, isLoading, error }: DiagramViewer
     pz.zoomAbs(0, 0, scale);
   }, []);
 
+  // Save viewport when navigating away — runs on slug change only,
+  // independent of async diagram loading so the save window isn't missed.
+  useEffect((): void => {
+    if (prevSlugRef.current && prevSlugRef.current !== slug) {
+      saveCurrentViewport();
+    }
+    prevSlugRef.current = slug;
+  }, [slug, saveCurrentViewport]);
+
   useEffect((): (() => void) => {
     let cancelled = false;
 
@@ -251,12 +262,6 @@ export function DiagramViewer({ slug, diagram, isLoading, error }: DiagramViewer
       if (!diagram?.content || !canvasRef.current) {
         return;
       }
-
-      // Save viewport of previous diagram before switching
-      if (prevSlugRef.current && prevSlugRef.current !== slug) {
-        saveCurrentViewport();
-      }
-      prevSlugRef.current = slug;
 
       setRenderError(null);
       canvasRef.current.innerHTML = '';
@@ -341,6 +346,8 @@ export function DiagramViewer({ slug, diagram, isLoading, error }: DiagramViewer
   return (
     <section className="viewer-shell" ref={viewerRef}>
       <Toolbar
+        sidebarCollapsed={sidebarCollapsed}
+        onToggleSidebar={onToggleSidebar}
         onZoomIn={(): void => {
           if (panzoomRef.current) {
             panzoomRef.current.smoothZoom(0, 0, 1.2);

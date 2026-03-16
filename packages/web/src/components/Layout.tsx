@@ -58,13 +58,12 @@ export function Layout({ slugFromRoot = '' }: LayoutProps): JSX.Element {
 
   return (
     <div className={`layout${collapsed ? ' sidebar-collapsed' : ''}`}>
-      {collapsed ? (
-        <button
-          type="button"
-          className="sidebar-toggle-float"
-          onClick={(): void => setCollapsed(false)}
-          aria-label="Open sidebar"
-        >☰</button>
+      {!collapsed && isMobile ? (
+        <div
+          className="sidebar-backdrop"
+          onClick={(): void => setCollapsed(true)}
+          role="presentation"
+        />
       ) : null}
       <Sidebar
         diagrams={diagrams}
@@ -90,6 +89,8 @@ export function Layout({ slugFromRoot = '' }: LayoutProps): JSX.Element {
             diagram={selectedDiagram}
             isLoading={diagramQuery.isLoading}
             error={diagramQuery.error}
+            sidebarCollapsed={collapsed}
+            onToggleSidebar={(): void => setCollapsed(false)}
           />
         ) : null}
         {!slug && latestDiagram ? (
