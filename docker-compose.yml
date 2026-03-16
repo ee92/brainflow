@@ -19,7 +19,7 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "${DRAW_PORT:-3030}:3900"
+      - "127.0.0.1:${DRAW_PORT:-3030}:3900"
     environment:
       DATABASE_URL: postgres://draw:${DRAW_DB_PASSWORD}@postgres:5432/draw
       PORT: 3900
