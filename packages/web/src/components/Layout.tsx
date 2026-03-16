@@ -86,6 +86,7 @@ export function Layout({ slugFromRoot = '' }: LayoutProps): JSX.Element {
         {notFound ? <ErrorState message="Diagram not found." source="" /> : null}
         {!notFound ? (
           <DiagramViewer
+            slug={slug}
             diagram={selectedDiagram}
             isLoading={diagramQuery.isLoading}
             error={diagramQuery.error}
