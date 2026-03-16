@@ -1,10 +1,10 @@
-# your-domain.com — Architecture Specification v2
+# draw.example.com — Architecture Specification v2
 
 ## Overview
 
 A self-hosted diagram viewer and manager. Users create and browse architecture diagrams via a web UI. Agents and scripts create/update diagrams via REST API or CLI. Diagrams use Mermaid syntax with C4 architecture conventions.
 
-This application replaces  at `your-domain.com`.
+Self-hosted diagram viewer at your domain (e.g. `draw.example.com`).
 
 **This document is the single source of truth for implementation.** Every detail is specified. Follow it exactly.
 
@@ -751,7 +751,7 @@ draw open <slug>                             Open diagram in default browser
 ```bash
 # Create from stdin
 echo "graph TD; A-->B" | draw create "Quick sketch" --stdin
-# → Created "Quick sketch" → https://your-domain.com/d/quick-sketch
+# → Created "Quick sketch" → https://draw.example.com/d/quick-sketch
 
 # Get content and pipe to file
 draw get example-overview > backup.mmd
@@ -893,7 +893,7 @@ DRAW_DB_PASSWORD=change-me-in-production
 
 # Optional
 DRAW_PORT=3030
-CORS_ORIGIN=https://your-domain.com
+CORS_ORIGIN=https://draw.example.com
 ```
 
 **Note:** `DRAW_DB_PASSWORD` uses `?` syntax in compose — Docker will refuse to start if this env var is not set. No more accidental `draw` passwords in production.
@@ -1013,14 +1013,14 @@ curl http://localhost:3030/api/v1/diagrams  # → { "ok": true, "data": [], "met
 
 # 6. Update Cloudflare tunnel
 # In :
-# Ensure your-domain.com service points to localhost:3030
+# Ensure draw.example.com service points to localhost:3030
 
 # 7. Verify public access
-curl https://your-domain.com/healthz
+curl https://draw.example.com/healthz
 
 
 # 9. Create test diagram
-curl -X POST https://your-domain.com/api/v1/diagrams \
+curl -X POST https://draw.example.com/api/v1/diagrams \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Test Diagram",

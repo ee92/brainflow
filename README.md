@@ -18,7 +18,7 @@ A self-hosted diagram viewer and manager. Create, browse, and link architecture 
 ## Quick Start
 
 ```bash
-git clone https://github.com/youruser/brainflow.git
+git clone https://github.com/ee92/brainflow.git
 cd brainflow
 cp .env.example .env
 # Edit .env and set DRAW_DB_PASSWORD
