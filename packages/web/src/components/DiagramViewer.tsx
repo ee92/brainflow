@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, type NavigateFunction } from 'react-router-dom';
 import panzoom, { type PanZoom } from 'panzoom';
 import type { ApiClientError, Diagram } from '../types/models';
+import { saveViewport, getViewport, type ViewportState } from '../hooks/useViewportStore';
 import { ErrorState } from './ErrorState';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { Toolbar } from './Toolbar';
@@ -23,6 +24,7 @@ interface ClickLink {
 type ClickLinks = Record<string, ClickLink>;
 
 interface DiagramViewerProps {
+  slug: string;
   diagram: Diagram | undefined;
   isLoading: boolean;
   error: Error | ApiClientError | null;
@@ -186,14 +188,34 @@ function attachClickHandlers(container: HTMLDivElement, clickLinks: ClickLinks, 
   }
 }
 
-export function DiagramViewer({ diagram, isLoading, error }: DiagramViewerProps): JSX.Element | null {
+export function DiagramViewer({ slug, diagram, isLoading, error }: DiagramViewerProps): JSX.Element | null {
   const viewerRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const panzoomRef = useRef<PanZoom | null>(null);
+  const prevSlugRef = useRef<string>('');
   const [renderError, setRenderError] = useState<string | null>(null);
   const [showRaw, setShowRaw] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const navigate: NavigateFunction = useNavigate();
+
+  // Save viewport state before navigating away from current diagram
+  const saveCurrentViewport = useCallback((): void => {
+    const pz: PanZoom | null = panzoomRef.current;
+    const currentSlug: string = prevSlugRef.current;
+    if (!pz || !currentSlug || !canvasRef.current) {
+      return;
+    }
+    // panzoom stores transform on the element's style.transform as a CSS matrix
+    const style: string = canvasRef.current.style.transform;
+    const matrixMatch: RegExpMatchArray | null = style.match(/matrix\(([^)]+)\)/);
+    if (matrixMatch && matrixMatch[1]) {
+      const parts: string[] = matrixMatch[1].split(',').map((s: string): string => s.trim());
+      const scale: number = parseFloat(parts[0] || '1');
+      const x: number = parseFloat(parts[4] || '0');
+      const y: number = parseFloat(parts[5] || '0');
+      saveViewport(currentSlug, { x, y, scale });
+    }
+  }, []);
 
   const fitToScreen = useCallback((): void => {
     const pz: PanZoom | null = panzoomRef.current;
@@ -230,6 +252,12 @@ export function DiagramViewer({ diagram, isLoading, error }: DiagramViewerProps)
         return;
       }
 
+      // Save viewport of previous diagram before switching
+      if (prevSlugRef.current && prevSlugRef.current !== slug) {
+        saveCurrentViewport();
+      }
+      prevSlugRef.current = slug;
+
       setRenderError(null);
       canvasRef.current.innerHTML = '';
 
@@ -259,7 +287,14 @@ export function DiagramViewer({ diagram, isLoading, error }: DiagramViewerProps)
           smoothScroll: false,
         });
 
-        fitToScreen();
+        // Restore saved viewport or fit to screen for first visit
+        const saved: ViewportState | undefined = getViewport(slug);
+        if (saved) {
+          panzoomRef.current.zoomAbs(0, 0, saved.scale);
+          panzoomRef.current.moveTo(saved.x, saved.y);
+        } else {
+          fitToScreen();
+        }
       } catch (renderFailure: unknown) {
         if (!cancelled) {
           if (isErrorWithMessage(renderFailure)) {
@@ -276,15 +311,16 @@ export function DiagramViewer({ diagram, isLoading, error }: DiagramViewerProps)
     return (): void => {
       cancelled = true;
     };
-  }, [diagram, navigate, fitToScreen]);
+  }, [diagram, slug, navigate, fitToScreen, saveCurrentViewport]);
 
   useEffect((): (() => void) => {
     return (): void => {
+      saveCurrentViewport();
       if (panzoomRef.current) {
         panzoomRef.current.dispose();
       }
     };
-  }, []);
+  }, [saveCurrentViewport]);
 
   if (isLoading) {
     return <LoadingSkeleton />;
