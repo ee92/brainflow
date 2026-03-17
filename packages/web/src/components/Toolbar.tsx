@@ -4,6 +4,8 @@ interface ToolbarProps {
   onFit: () => void;
   onCopy: () => Promise<void>;
   onToggleRaw: () => void;
+  onEdit: () => void;
+  onNew: () => void;
   onFullscreen: () => void;
   onToggleTheme: () => void;
   sidebarCollapsed: boolean;
@@ -11,7 +13,7 @@ interface ToolbarProps {
 }
 
 export function Toolbar({
-  onZoomIn, onZoomOut, onFit, onCopy, onToggleRaw, onFullscreen, onToggleTheme,
+  onZoomIn, onZoomOut, onFit, onCopy, onToggleRaw, onEdit, onNew, onFullscreen, onToggleTheme,
   sidebarCollapsed, onToggleSidebar,
 }: ToolbarProps): JSX.Element {
   return (
@@ -24,6 +26,8 @@ export function Toolbar({
       <button type="button" aria-label="Fit to Screen" onClick={onFit}>Fit</button>
       <button type="button" aria-label="Copy Source" onClick={(): void => { void onCopy(); }}>Copy</button>
       <button type="button" aria-label="Toggle Raw" onClick={onToggleRaw}>Raw</button>
+      <button type="button" aria-label="Edit Diagram" onClick={onEdit}>Edit</button>
+      <button type="button" aria-label="New Diagram" onClick={onNew}>New</button>
       <button type="button" aria-label="Fullscreen" onClick={onFullscreen}>⛶</button>
       <button type="button" aria-label="Toggle Theme" onClick={onToggleTheme}>◐</button>
     </div>
