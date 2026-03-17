@@ -5,7 +5,13 @@ COPY package*.json ./
 COPY packages/server/package*.json packages/server/
 COPY packages/web/package*.json packages/web/
 COPY packages/cli/package*.json packages/cli/
-RUN npm install && npm install @rollup/rollup-linux-x64-musl
+RUN npm install && \
+    ARCH=$(uname -m) && \
+    if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
+      npm install @rollup/rollup-linux-arm64-musl; \
+    else \
+      npm install @rollup/rollup-linux-x64-musl; \
+    fi
 COPY . .
 RUN npm run build --workspace=packages/server && npm run build --workspace=packages/web
 
