@@ -4,10 +4,12 @@ import { isApiClientError } from '../api/client';
 import { useDiagram } from '../hooks/useDiagram';
 import { useDiagrams } from '../hooks/useDiagrams';
 import type { DiagramFilters, DiagramSummary } from '../types/models';
+import { CreateDiagramDialog } from './CreateDiagramDialog';
 import { DiagramViewer } from './DiagramViewer';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import { Sidebar } from './Sidebar';
+import { SourceEditor } from './SourceEditor';
 
 interface LayoutProps {
   slugFromRoot?: string;
@@ -36,10 +38,16 @@ export function Layout({ slugFromRoot = '' }: LayoutProps): JSX.Element {
   const navigate: NavigateFunction = useNavigate();
   const isMobile: boolean = useIsMobile();
   const [collapsed, setCollapsed] = useState<boolean>(isMobile);
+  const [editMode, setEditMode] = useState<boolean>(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
 
   useEffect((): void => {
     setCollapsed(isMobile);
   }, [isMobile]);
+
+  useEffect((): void => {
+    setEditMode(false);
+  }, [slug]);
 
   const filters: DiagramFilters = useMemo(
     (): DiagramFilters => ({ search: q, sort: 'updated_at', order: 'desc', limit: 50, offset: 0 }),
@@ -70,6 +78,7 @@ export function Layout({ slugFromRoot = '' }: LayoutProps): JSX.Element {
         query={q}
         collapsed={collapsed}
         onToggle={(): void => setCollapsed((value: boolean): boolean => !value)}
+        onNewDiagram={(): void => setCreateDialogOpen(true)}
         onSearch={(value: string): void => {
           const next: URLSearchParams = new URLSearchParams(searchParams);
           if (value) {
@@ -84,14 +93,31 @@ export function Layout({ slugFromRoot = '' }: LayoutProps): JSX.Element {
         {!hasAnyDiagrams && !diagramsQuery.isLoading ? <EmptyState /> : null}
         {notFound ? <ErrorState message="Diagram not found." source="" /> : null}
         {!notFound ? (
-          <DiagramViewer
-            slug={slug}
-            diagram={selectedDiagram}
-            isLoading={diagramQuery.isLoading}
-            error={diagramQuery.error}
-            sidebarCollapsed={collapsed}
-            onToggleSidebar={(): void => setCollapsed(false)}
-          />
+          editMode && selectedDiagram ? (
+            <SourceEditor
+              diagram={selectedDiagram}
+              sidebarCollapsed={collapsed}
+              onToggleSidebar={(): void => setCollapsed(false)}
+              onCancel={(): void => setEditMode(false)}
+              onSaved={(updatedDiagram): void => {
+                setEditMode(false);
+                if (updatedDiagram.slug !== slug) {
+                  void navigate(`/d/${updatedDiagram.slug}`);
+                }
+              }}
+            />
+          ) : (
+            <DiagramViewer
+              slug={slug}
+              diagram={selectedDiagram}
+              isLoading={diagramQuery.isLoading}
+              error={diagramQuery.error}
+              sidebarCollapsed={collapsed}
+              onToggleSidebar={(): void => setCollapsed(false)}
+              onEdit={(): void => setEditMode(true)}
+              onNew={(): void => setCreateDialogOpen(true)}
+            />
+          )
         ) : null}
         {!slug && latestDiagram ? (
           <button
@@ -103,6 +129,7 @@ export function Layout({ slugFromRoot = '' }: LayoutProps): JSX.Element {
           </button>
         ) : null}
       </main>
+      <CreateDiagramDialog open={createDialogOpen} onClose={(): void => setCreateDialogOpen(false)} />
     </div>
   );
 }

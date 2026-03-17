@@ -3,25 +3,10 @@ import { useNavigate, type NavigateFunction } from 'react-router-dom';
 import panzoom, { type PanZoom } from 'panzoom';
 import type { ApiClientError, Diagram } from '../types/models';
 import { saveViewport, getViewport, type ViewportState } from '../hooks/useViewportStore';
+import { parseClickDirectives, renderMermaidSvg, type ClickLinks } from '../utils/mermaid';
 import { ErrorState } from './ErrorState';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { Toolbar } from './Toolbar';
-
-interface MermaidApi {
-  initialize: (config: Record<string, unknown>) => void;
-  render: (id: string, definition: string) => Promise<{ svg: string }>;
-}
-
-interface MermaidModule {
-  default: MermaidApi;
-}
-
-interface ClickLink {
-  url: string;
-  tooltip: string;
-}
-
-type ClickLinks = Record<string, ClickLink>;
 
 interface DiagramViewerProps {
   slug: string;
@@ -30,9 +15,9 @@ interface DiagramViewerProps {
   error: Error | ApiClientError | null;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
+  onEdit: () => void;
+  onNew: () => void;
 }
-
-let mermaidLoader: Promise<MermaidApi> | undefined;
 
 function isErrorWithMessage(error: unknown): error is { message: string } {
   if (typeof error !== 'object' || error === null) {
@@ -44,49 +29,6 @@ function isErrorWithMessage(error: unknown): error is { message: string } {
   }
 
   return typeof error.message === 'string';
-}
-
-async function getMermaid(): Promise<MermaidApi> {
-  if (!mermaidLoader) {
-    mermaidLoader = import('mermaid').then((mod: MermaidModule): MermaidApi => {
-      const mermaid: MermaidApi = mod.default;
-      mermaid.initialize({
-        startOnLoad: false,
-        theme: 'dark',
-        securityLevel: 'strict',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        flowchart: { useMaxWidth: true },
-        c4: { useMaxWidth: true },
-      });
-      return mermaid;
-    });
-  }
-
-  return mermaidLoader;
-}
-
-function parseClickDirectives(content: string): ClickLinks {
-  const links: ClickLinks = {};
-  const lines: string[] = content.split('\n');
-  for (const line of lines) {
-    const match: RegExpMatchArray | null = line.trim().match(/^click\s+(\S+)\s+"([^"]+)"(?:\s+"([^"]+)")?/);
-    if (match) {
-      const nodeId: string | undefined = match[1];
-      const url: string | undefined = match[2];
-      if (nodeId && url) {
-        links[nodeId] = { url, tooltip: match[3] || '' };
-      }
-    }
-  }
-
-  return links;
-}
-
-function stripClickDirectives(content: string): string {
-  return content
-    .split('\n')
-    .filter((line: string): boolean => !line.trim().match(/^click\s+/))
-    .join('\n');
 }
 
 function attachClickHandlers(container: HTMLDivElement, clickLinks: ClickLinks, navigate: NavigateFunction): void {
@@ -190,7 +132,16 @@ function attachClickHandlers(container: HTMLDivElement, clickLinks: ClickLinks, 
   }
 }
 
-export function DiagramViewer({ slug, diagram, isLoading, error, sidebarCollapsed, onToggleSidebar }: DiagramViewerProps): JSX.Element | null {
+export function DiagramViewer({
+  slug,
+  diagram,
+  isLoading,
+  error,
+  sidebarCollapsed,
+  onToggleSidebar,
+  onEdit,
+  onNew,
+}: DiagramViewerProps): JSX.Element | null {
   const viewerRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const panzoomRef = useRef<PanZoom | null>(null);
@@ -267,19 +218,16 @@ export function DiagramViewer({ slug, diagram, isLoading, error, sidebarCollapse
       canvasRef.current.innerHTML = '';
 
       try {
-        const mermaid: MermaidApi = await getMermaid();
         const id: string = `diagram-${diagram.id}-${Date.now()}`;
 
         const clickLinks: ClickLinks = parseClickDirectives(diagram.content);
-        const cleanContent: string = stripClickDirectives(diagram.content);
-
-        const rendered = await mermaid.render(id, cleanContent);
+        const renderedSvg: string = await renderMermaidSvg(diagram.content, id);
 
         if (cancelled || !canvasRef.current) {
           return;
         }
 
-        canvasRef.current.innerHTML = rendered.svg;
+        canvasRef.current.innerHTML = renderedSvg;
         attachClickHandlers(canvasRef.current, clickLinks, navigate);
 
         if (panzoomRef.current) {
@@ -365,6 +313,8 @@ export function DiagramViewer({ slug, diagram, isLoading, error, sidebarCollapse
           setTimeout((): void => setCopied(false), 2000);
         }}
         onToggleRaw={(): void => setShowRaw((value: boolean): boolean => !value)}
+        onEdit={onEdit}
+        onNew={onNew}
         onFullscreen={(): void => {
           if (viewerRef.current?.requestFullscreen) {
             void viewerRef.current.requestFullscreen();

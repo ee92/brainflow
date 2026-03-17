@@ -8,9 +8,10 @@ interface SidebarProps {
   onSearch: (value: string) => void;
   collapsed: boolean;
   onToggle: () => void;
+  onNewDiagram: () => void;
 }
 
-export function Sidebar({ diagrams, query, onSearch, collapsed, onToggle }: SidebarProps): JSX.Element {
+export function Sidebar({ diagrams, query, onSearch, collapsed, onToggle, onNewDiagram }: SidebarProps): JSX.Element {
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
@@ -19,6 +20,9 @@ export function Sidebar({ diagrams, query, onSearch, collapsed, onToggle }: Side
           <span className="brand-name">Brainflow</span>
         </div>
         <button type="button" className="sidebar-close" onClick={onToggle} aria-label="Close sidebar">✕</button>
+      </div>
+      <div className="sidebar-actions">
+        <button type="button" className="new-diagram-button" onClick={onNewDiagram}>+ New Diagram</button>
       </div>
       <SearchBar value={query} onSearch={onSearch} />
       <DiagramList diagrams={diagrams} query={query} />

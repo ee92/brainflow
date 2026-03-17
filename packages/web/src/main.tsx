@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import './styles/components/layout.css';
 import './styles/components/sidebar.css';
 import './styles/components/viewer.css';
+import './styles/components/editor.css';
 import './styles/global.css';
 import './styles/variables.css';
 
