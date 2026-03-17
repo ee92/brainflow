@@ -4,7 +4,7 @@ import { EditorView } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
 import { markdown } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { basicSetup } from '@codemirror/basic-setup';
+import { basicSetup } from 'codemirror';
 import { api, isApiClientError } from '../api/client';
 import { diagramKeys } from '../hooks/useDiagrams';
 import type { Diagram } from '../types/models';
